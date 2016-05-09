@@ -5,8 +5,8 @@ import org.quartz.JobExecutionException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by markmo on 3/05/2016.
@@ -15,7 +15,8 @@ public class MyJob implements Job {
 
     private Service service;
     private String query;
-    private JobArgs jobArgs;
+    private JobExportArgs exportArgs;
+    private AtomicInteger i = new AtomicInteger(24);
 
     public MyJob() {
         Properties conf = new Properties();
@@ -37,32 +38,24 @@ public class MyJob implements Job {
 
         service = Service.connect(loginArgs);
 
-        query = "search *";
-        jobArgs = new JobArgs();
-        jobArgs.setExecutionMode(JobArgs.ExecutionMode.NORMAL);
+        query = "search index=tr69 | table _raw";
+        exportArgs = new JobExportArgs();
+        exportArgs.setSearchMode(JobExportArgs.SearchMode.NORMAL);
     }
 
     public void execute(JobExecutionContext context) throws JobExecutionException {
-
-        com.splunk.Job job = service.getJobs().create(query, jobArgs);
-
-        while (!job.isDone()) {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        JobResultsArgs resultsArgs = new JobResultsArgs();
-        resultsArgs.setOutputMode(JobResultsArgs.OutputMode.JSON);
+        exportArgs.setEarliestTime("@d-" + i.get() + "h");
+        exportArgs.setLatestTime("@d-" + i.decrementAndGet() + "h");
+        exportArgs.setMaximumLines(0);
+        exportArgs.setMaximumTime(0);
 
         try {
-            InputStream results = job.getResults(resultsArgs);
-            ResultsReaderJson reader = new ResultsReaderJson(results);
-            HashMap<String, String> event;
-            while ((event = reader.getNextEvent()) != null) {
-                System.out.println(event.get("_raw"));
+            InputStream exportSearch = service.export(query, exportArgs);
+            MultiResultsReaderJson reader = new MultiResultsReaderJson(exportSearch);
+            for (SearchResults results : reader) {
+                for (Event event : results) {
+                    System.out.println(event.get("_raw"));
+                }
             }
             reader.close();
         } catch (IOException e) {
