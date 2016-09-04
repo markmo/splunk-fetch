@@ -4,7 +4,6 @@ import org.quartz.Trigger;
 import org.quartz.impl.StdSchedulerFactory;
 
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 
 import static org.quartz.JobBuilder.newJob;
@@ -34,16 +33,12 @@ public class App {
                 .withIdentity("job1", "group1")
                 .build();
 
-//        Calendar cal = Calendar.getInstance();
-//        cal.set(2016, Calendar.MAY, 4, 1, 0, 0);
-
         // datetime in 24hr format, e.g. 2016-05-04 21:00
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd k:mm");
         Date time = formatter.parse(args[0]);
 
         Trigger trigger = newTrigger()
                 .withIdentity("trigger1", "group1")
-                //.startAt(cal.getTime())
                 .startAt(time)
                 .withSchedule(simpleSchedule()
                         .withIntervalInMinutes(Integer.parseInt(args[1]))

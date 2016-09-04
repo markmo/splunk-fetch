@@ -60,3 +60,4 @@ gradle-app.setting
 
 .DS_Store
 src/main/resources/config.properties
+src/main/resources/config.properties.prod
